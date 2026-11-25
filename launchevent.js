@@ -2,50 +2,65 @@
 // Keep this file ES2016-safe: classic Outlook on Windows runs it in a JavaScript-only runtime.
 const UNLOCK_KEY = "pinGuardUnlockedAt";
 const UNLOCK_WINDOW_MS = 60 * 1000; // unlock is valid for 60 seconds and for ONE send
+const COMPLETE_TIMEOUT_MS = 2000;   // never leave Outlook waiting on a missing key
 
-function blockSend(event) {
-  event.completed({
+function blockOptions() {
+  return {
     allowEvent: false,
     errorMessage: "Sending is locked. Select Enter PIN, then enter your PIN to send this message.",
     errorMessageMarkdown:
       "**Sending is locked.** Select **Enter PIN** and enter your PIN to send this message.",
     cancelLabel: "Enter PIN",
     commandId: "msgComposeOpenPaneButton"
-  });
+  };
 }
 
 function onMessageSendHandler(event) {
+  let finished = false;
+  let timer = null;
+
+  function finish(allow) {
+    if (finished) return;
+    finished = true;
+    if (timer) clearTimeout(timer);
+    event.completed(allow ? { allowEvent: true } : blockOptions());
+  }
+
+  // The sessionData read can fail to call back when the key is absent.
+  // Complete as "blocked" rather than letting Outlook hang on "processing".
+  timer = setTimeout(function () { finish(false); }, COMPLETE_TIMEOUT_MS);
+
   try {
     const item = Office.context.mailbox.item;
     if (!item || !item.sessionData) {
-      blockSend(event);
+      finish(false);
       return;
     }
 
     item.sessionData.getAsync(UNLOCK_KEY, function (r) {
       try {
         if (r.status !== Office.AsyncResultStatus.Succeeded || !r.value) {
-          blockSend(event);
+          finish(false);
           return;
         }
 
         const unlockedAt = Number(r.value);
         const age = Date.now() - unlockedAt;
         if (!isFinite(unlockedAt) || !(age >= 0 && age <= UNLOCK_WINDOW_MS)) {
-          blockSend(event);
+          finish(false);
           return;
         }
 
         // Consume the unlock, then allow this one send.
         item.sessionData.removeAsync(UNLOCK_KEY, function () {
-          event.completed({ allowEvent: true });
+          finish(true);
         });
       } catch (e) {
-        blockSend(event);
+        finish(false);
       }
     });
   } catch (e) {
-    blockSend(event);
+    finish(false);
   }
 }
 

@@ -183,6 +183,8 @@ async function unlock() {
     setMsg("Unlocked. Sending…", "info");
 
     await setUnlock();
+    // Give the launch-event runtime a moment to see the sessionData write.
+    await delay(400);
 
     // Don't turn a "Send later" into an immediate send.
     if (await hasDelayedDelivery()) {
