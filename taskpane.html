@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Send PIN Guard</title>
+  <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+  <style>
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #ffffff;
+      color: #242424;
+      padding: 18px;
+      margin: 0;
+      max-width: 460px;
+    }
+    h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+    .sub { font-size: 13px; color: #616161; margin: 0 0 16px; line-height: 1.4; }
+    label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+    input, button {
+      font-size: 16px;
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+      border-radius: 6px;
+      font-family: inherit;
+    }
+    input {
+      border: 1px solid #8a8886;
+      margin-bottom: 10px;
+      background: #ffffff;
+      color: #242424;
+    }
+    input:focus { outline: 2px solid #0f6cbd; outline-offset: -1px; border-color: #0f6cbd; }
+    button {
+      border: 0;
+      background: #0f6cbd;
+      color: #ffffff;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover:not(:disabled) { background: #115ea3; }
+    button:disabled { opacity: 0.55; cursor: default; }
+    #msg { margin-top: 14px; min-height: 2.6em; font-size: 14px; line-height: 1.4; }
+    #msg.err { color: #a4262c; }
+    #msg.ok { color: #107c10; }
+    #msg.info { color: #616161; }
+    .note { margin-top: 18px; font-size: 12px; color: #707070; line-height: 1.45; }
+  </style>
+</head>
+<body>
+  <h1>Unlock sending</h1>
+  <p class="sub">Enter your PIN to send this one message. The unlock is valid for 60 seconds and one send.</p>
+
+  <label for="pin">PIN</label>
+  <input id="pin" type="password" inputmode="text" autocomplete="off"
+         autocapitalize="off" spellcheck="false" maxlength="256" placeholder="Enter PIN" />
+  <button id="go" type="button">Unlock and send</button>
+  <div id="msg" role="status" aria-live="polite"></div>
+
+  <p class="note">If you don't know the PIN, cancel this send and ask the add-in owner. Closing this pane leaves the message locked.</p>
+
+  <script src="config.js"></script>
+  <script src="taskpane.js"></script>
+</body>
+</html>
