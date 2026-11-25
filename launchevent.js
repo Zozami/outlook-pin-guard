@@ -23,7 +23,21 @@ function onMessageSendHandler(event) {
     if (finished) return;
     finished = true;
     if (timer) clearTimeout(timer);
-    event.completed(allow ? { allowEvent: true } : blockOptions());
+
+    const options = allow ? { allowEvent: true } : blockOptions();
+    try {
+      event.completed(options);
+    } catch (e) {
+      // If the client rejects the rich dialog options, at least complete with a plain block.
+      try {
+        event.completed({
+          allowEvent: false,
+          errorMessage: "Sending is locked. Open the Send PIN Guard pane to enter your PIN."
+        });
+      } catch (e2) {
+        // Nothing else we can do; the client will time out and keep the message.
+      }
+    }
   }
 
   // The sessionData read can fail to call back when the key is absent.
