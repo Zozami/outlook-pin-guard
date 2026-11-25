@@ -31,6 +31,29 @@ message out when the add-in is unavailable.
 
 ---
 
+## Blocked-attempt log
+
+When a send is blocked, the add-in records a **local** entry with:
+
+- date/time
+- To and Cc recipients
+- subject
+- the first 500 characters of the message body
+
+The task pane shows the most recent entries under **Blocked attempts**. Wrong
+PIN entries are recorded too (time + subject). Up to 30 entries are kept, and
+**Clear this log** removes them.
+
+The log is stored in the add-in's `localStorage` in that browser/Outlook
+profile on that device. It does **not** sync to other devices and is not sent
+anywhere. In classic Outlook, the send event runs in a JavaScript-only runtime
+without `localStorage`, so the automatic entries are not available there;
+wrong-PIN entries from the task pane still work.
+
+The PIN itself is never logged.
+
+---
+
 ## Setup (one time)
 
 ### 1. Choose the PIN

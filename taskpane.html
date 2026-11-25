@@ -45,6 +45,15 @@
     #msg.err { color: #a4262c; }
     #msg.ok { color: #107c10; }
     #msg.info { color: #616161; }
+    details { margin-top: 18px; font-size: 13px; }
+    summary { cursor: pointer; font-weight: 600; }
+    .logList { margin-top: 8px; display: grid; gap: 8px; }
+    .logEntry { border-left: 3px solid #a4262c; padding: 4px 0 4px 8px; }
+    .logHead { font-weight: 600; font-size: 13px; }
+    .logMeta { font-size: 12px; color: #555; margin-top: 2px; word-break: break-word; }
+    .logPreview { font-size: 12px; color: #666; margin-top: 4px; white-space: pre-wrap; word-break: break-word; }
+    .linkBtn { background: none; color: #0f6cbd; border: 0; padding: 8px 0; width: auto; font-size: 12px; cursor: pointer; font-weight: 600; }
+    .empty { color: #707070; font-size: 12px; }
     .note { margin-top: 18px; font-size: 12px; color: #707070; line-height: 1.45; }
   </style>
 </head>
@@ -58,9 +67,15 @@
   <button id="go" type="button">Unlock and send</button>
   <div id="msg" role="status" aria-live="polite"></div>
 
+  <details id="logBox">
+    <summary>Blocked attempts (<span id="logCount">0</span>)</summary>
+    <div id="logList" class="logList"></div>
+    <button id="clearLog" class="linkBtn" type="button">Clear this log</button>
+  </details>
+
   <p class="note">If you don't know the PIN, cancel this send and ask the add-in owner. Closing this pane leaves the message locked.</p>
 
-  <script src="config.js?v=2"></script>
-  <script src="taskpane.js?v=2"></script>
+  <script src="config.js?v=3"></script>
+  <script src="taskpane.js?v=3"></script>
 </body>
 </html>

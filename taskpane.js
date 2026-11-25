@@ -4,6 +4,8 @@ const UNLOCK_KEY = "pinGuardUnlockedAt";
 const MAX_PIN_LENGTH = 256;
 const DELAY_AFTER_FAILURES = 3;
 const DELAY_MS = 30000;
+const LOG_KEY = "pinGuardBlockedLog";
+const LOG_MAX = 30;
 
 let busy = false;
 let failures = 0;
@@ -74,6 +76,89 @@ function setBusy(value) {
 }
 
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+function readLog() {
+  try {
+    const raw = localStorage.getItem(LOG_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeLog(list) {
+  try {
+    localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, LOG_MAX)));
+  } catch (_) {
+    // Local logging is optional.
+  }
+}
+
+function renderLog() {
+  const listEl = document.getElementById("logList");
+  const countEl = document.getElementById("logCount");
+  if (!listEl || !countEl) return;
+
+  const entries = readLog();
+  countEl.textContent = String(entries.length);
+  listEl.textContent = "";
+
+  if (!entries.length) {
+    const empty = document.createElement("div");
+    empty.className = "empty";
+    empty.textContent = "No blocked attempts recorded on this device.";
+    listEl.appendChild(empty);
+    return;
+  }
+
+  entries.slice(0, 10).forEach((e) => {
+    const row = document.createElement("div");
+    row.className = "logEntry";
+
+    const head = document.createElement("div");
+    head.className = "logHead";
+    let when = "";
+    try { when = e.at ? new Date(e.at).toLocaleString() : ""; } catch (_) {}
+    head.textContent = when + (e.kind === "wrong-pin" ? " — wrong PIN" : " — " + (e.subject || "(no subject)"));
+
+    const meta = document.createElement("div");
+    meta.className = "logMeta";
+    meta.textContent = "To: " + (e.to || "(no recipient)") + (e.cc ? " | Cc: " + e.cc : "");
+
+    row.appendChild(head);
+    row.appendChild(meta);
+
+    if (e.body) {
+      const preview = document.createElement("div");
+      preview.className = "logPreview";
+      preview.textContent = e.body;
+      row.appendChild(preview);
+    }
+
+    listEl.appendChild(row);
+  });
+}
+
+function logWrongPin() {
+  try {
+    const item = Office.context.mailbox.item;
+    const subject = item && item.subject ? item.subject : "";
+    const entries = readLog();
+    entries.unshift({
+      at: new Date().toISOString(),
+      kind: "wrong-pin",
+      subject: subject,
+      to: "",
+      cc: "",
+      body: "",
+    });
+    writeLog(entries);
+    renderLog();
+  } catch (_) {
+    // Local logging is optional.
+  }
+}
 
 function sessionData() {
   const item = Office.context.mailbox.item;
@@ -175,6 +260,7 @@ async function unlock() {
           : "Wrong PIN.",
         "err"
       );
+      logWrongPin();
       return;
     }
 
@@ -222,6 +308,14 @@ function init() {
     }
   });
   input.focus();
+  renderLog();
+  const clear = document.getElementById("clearLog");
+  if (clear) {
+    clear.addEventListener("click", () => {
+      try { localStorage.removeItem(LOG_KEY); } catch (_) {}
+      renderLog();
+    });
+  }
   if (!configIsReady()) {
     setMsg("PIN is not configured in config.js yet. The add-in owner needs to finish setup.", "err");
   }

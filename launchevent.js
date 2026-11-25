@@ -2,7 +2,11 @@
 // Keep this file ES2016-safe: classic Outlook on Windows runs it in a JavaScript-only runtime.
 const UNLOCK_KEY = "pinGuardUnlockedAt";
 const UNLOCK_WINDOW_MS = 60 * 1000; // unlock is valid for 60 seconds and for ONE send
-const COMPLETE_TIMEOUT_MS = 2000;   // never leave Outlook waiting on a missing key
+const COMPLETE_TIMEOUT_MS = 2500;   // never leave Outlook waiting on a missing key
+
+const LOG_KEY = "pinGuardBlockedLog";
+const LOG_MAX = 30;
+const LOG_DEADLINE_MS = 800;
 
 function blockOptions() {
   return {
@@ -15,16 +19,99 @@ function blockOptions() {
   };
 }
 
-function onMessageSendHandler(event) {
-  let finished = false;
-  let timer = null;
+function formatRecipients(list) {
+  if (!list || !list.length) return "";
+  var out = [];
+  for (var i = 0; i < list.length; i++) {
+    var r = list[i];
+    out.push((r.displayName ? r.displayName + " " : "") + "<" + r.emailAddress + ">");
+  }
+  return out.join("; ");
+}
 
-  function finish(allow) {
+// Best-effort local audit entry. It never blocks the send decision for longer than LOG_DEADLINE_MS.
+function recordBlocked(item, done) {
+  var entry = { at: new Date().toISOString(), subject: "", to: "", cc: "", body: "" };
+  var pending = 3;
+  var finished = false;
+  var timer = setTimeout(finish, LOG_DEADLINE_MS);
+
+  function finish() {
+    if (finished) return;
+    finished = true;
+    clearTimeout(timer);
+    try {
+      if (typeof localStorage !== "undefined") {
+        var raw = localStorage.getItem(LOG_KEY);
+        var list = raw ? JSON.parse(raw) : [];
+        if (!list || typeof list.length !== "number") list = [];
+        list.unshift(entry);
+        localStorage.setItem(LOG_KEY, JSON.stringify(list.slice(0, LOG_MAX)));
+      }
+    } catch (e) {
+      // Logging is optional; never break the send guard.
+    }
+    done();
+  }
+
+  function one() {
+    pending--;
+    if (pending <= 0) finish();
+  }
+
+  try {
+    entry.subject = item.subject || "";
+  } catch (e) {
+    entry.subject = "";
+  }
+
+  try {
+    item.to.getAsync(function (r) {
+      try {
+        if (r.status === Office.AsyncResultStatus.Succeeded) entry.to = formatRecipients(r.value);
+      } catch (e) {}
+      one();
+    });
+  } catch (e) {
+    one();
+  }
+
+  try {
+    item.cc.getAsync(function (r) {
+      try {
+        if (r.status === Office.AsyncResultStatus.Succeeded) entry.cc = formatRecipients(r.value);
+      } catch (e) {}
+      one();
+    });
+  } catch (e) {
+    one();
+  }
+
+  try {
+    item.body.getAsync("text", function (r) {
+      try {
+        if (r.status === Office.AsyncResultStatus.Succeeded) {
+          entry.body = String(r.value || "").replace(/\s+/g, " ").slice(0, 500);
+        }
+      } catch (e) {}
+      one();
+    });
+  } catch (e) {
+    one();
+  }
+}
+
+function onMessageSendHandler(event) {
+  var finished = false;
+  var loggingStarted = false;
+  var timer = null;
+
+  function complete(allow) {
     if (finished) return;
     finished = true;
     if (timer) clearTimeout(timer);
 
-    const options = allow ? { allowEvent: true } : blockOptions();
+    var options = allow ? { allowEvent: true } : blockOptions();
     try {
       event.completed(options);
     } catch (e) {
@@ -35,46 +122,58 @@ function onMessageSendHandler(event) {
           errorMessage: "Sending is locked. Open the Send PIN Guard pane to enter your PIN."
         });
       } catch (e2) {
-        // Nothing else we can do; the client will time out and keep the message.
+        // Nothing else we can do; the client keeps the message unsent.
       }
     }
   }
 
-  // The sessionData read can fail to call back when the key is absent.
-  // Complete as "blocked" rather than letting Outlook hang on "processing".
-  timer = setTimeout(function () { finish(false); }, COMPLETE_TIMEOUT_MS);
+  function block() {
+    if (finished || loggingStarted) return;
+    loggingStarted = true;
+    try {
+      var item = Office.context.mailbox.item;
+      if (item) {
+        recordBlocked(item, function () { complete(false); });
+        return;
+      }
+    } catch (e) {}
+    complete(false);
+  }
+
+  // Fail closed if anything below never calls back.
+  timer = setTimeout(function () { complete(false); }, COMPLETE_TIMEOUT_MS);
 
   try {
-    const item = Office.context.mailbox.item;
+    var item = Office.context.mailbox.item;
     if (!item || !item.sessionData) {
-      finish(false);
+      block();
       return;
     }
 
     item.sessionData.getAsync(UNLOCK_KEY, function (r) {
       try {
         if (r.status !== Office.AsyncResultStatus.Succeeded || !r.value) {
-          finish(false);
+          block();
           return;
         }
 
-        const unlockedAt = Number(r.value);
-        const age = Date.now() - unlockedAt;
+        var unlockedAt = Number(r.value);
+        var age = Date.now() - unlockedAt;
         if (!isFinite(unlockedAt) || !(age >= 0 && age <= UNLOCK_WINDOW_MS)) {
-          finish(false);
+          block();
           return;
         }
 
         // Consume the unlock, then allow this one send.
         item.sessionData.removeAsync(UNLOCK_KEY, function () {
-          finish(true);
+          complete(true);
         });
       } catch (e) {
-        finish(false);
+        block();
       }
     });
   } catch (e) {
-    finish(false);
+    block();
   }
 }
 
