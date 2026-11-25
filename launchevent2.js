@@ -12,8 +12,6 @@ function blockOptions() {
   return {
     allowEvent: false,
     errorMessage: "Sending is locked. Select Enter PIN, then enter your PIN to send this message.",
-    errorMessageMarkdown:
-      "**Sending is locked.** Select **Enter PIN** and enter your PIN to send this message.",
     cancelLabel: "Enter PIN",
     commandId: "msgComposeOpenPaneButton"
   };
@@ -150,14 +148,21 @@ function onMessageSendHandler(event) {
       return;
     }
 
-    item.sessionData.getAsync(UNLOCK_KEY, function (r) {
+    item.sessionData.getAllAsync(function (r) {
       try {
-        if (r.status !== Office.AsyncResultStatus.Succeeded || !r.value) {
+        if (r.status !== Office.AsyncResultStatus.Succeeded) {
           block();
           return;
         }
 
-        var unlockedAt = Number(r.value);
+        var data = r.value || {};
+        var value = data[UNLOCK_KEY];
+        if (!value) {
+          block();
+          return;
+        }
+
+        var unlockedAt = Number(value);
         var age = Date.now() - unlockedAt;
         if (!isFinite(unlockedAt) || !(age >= 0 && age <= UNLOCK_WINDOW_MS)) {
           block();

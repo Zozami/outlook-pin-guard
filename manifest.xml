@@ -5,7 +5,7 @@
   xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
   xsi:type="MailApp">
   <Id>29b839b0-7b2f-4da9-946b-5759bc97f5cf</Id>
-  <Version>1.0.0.1</Version>
+  <Version>1.0.0.3</Version>
   <ProviderName>PIN Guard</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Send PIN Guard"/>
@@ -27,7 +27,7 @@
   <FormSettings>
     <Form xsi:type="ItemEdit">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://zozami.github.io/outlook-pin-guard/taskpane.html"/>
+        <SourceLocation DefaultValue="https://zozami.github.io/outlook-pin-guard/taskpane2.html"/>
       </DesktopSettings>
     </Form>
   </FormSettings>
@@ -90,9 +90,9 @@
           <bt:Image id="Icon.80" DefaultValue="https://zozami.github.io/outlook-pin-guard/icon-80.png"/>
         </bt:Images>
         <bt:Urls>
-          <bt:Url id="WebViewRuntime.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/commands.html"/>
-          <bt:Url id="JSRuntime.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/launchevent.js"/>
-          <bt:Url id="Taskpane.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/taskpane.html"/>
+          <bt:Url id="WebViewRuntime.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/commands2.html"/>
+          <bt:Url id="JSRuntime.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/launchevent2.js"/>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://zozami.github.io/outlook-pin-guard/taskpane2.html"/>
         </bt:Urls>
         <bt:ShortStrings>
           <bt:String id="GroupLabel" DefaultValue="PIN Guard"/>
